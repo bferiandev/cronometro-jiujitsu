@@ -1,0 +1,687 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Cronômetro de Treino — Jiu Jitsu</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #0a0c0e;
+    --bg-soft: #14171b;
+    --card: #1b1f24;
+    --line: #2a2f36;
+    --text: #f2f1ec;
+    --text-dim: #8c9198;
+    --white-belt: #f2f1ec;
+    --blue-belt: #2e6ff2;
+    --purple-belt: #8b5cf6;
+    --brown-belt: #a9682f;
+    --danger: #e63946;
+  }
+
+  *{ box-sizing: border-box; margin:0; padding:0; }
+
+  html, body{
+    width:100%; height:100%;
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', sans-serif;
+    overflow:hidden;
+    -webkit-user-select:none;
+    user-select:none;
+  }
+
+  #app{
+    position:relative;
+    width:100vw; height:100vh;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    background:
+      radial-gradient(ellipse at 50% 0%, rgba(255,255,255,0.05), transparent 60%),
+      var(--bg);
+    transition: box-shadow 0.4s ease;
+  }
+
+  /* faixa lateral tipo faixa de kimono, marca as etapas do round */
+  #belt-bar{
+    position:absolute;
+    left:0; top:0; bottom:0;
+    width:14px;
+    background: var(--bg-soft);
+    display:flex;
+    flex-direction:column-reverse;
+    overflow:hidden;
+  }
+  #belt-fill{
+    width:100%;
+    height:100%;
+    background: var(--white-belt);
+    transition: height 0.3s linear, background 0.4s ease;
+  }
+  #belt-bar .stripe{
+    position:absolute;
+    left:0; width:100%; height:3px;
+    background: rgba(0,0,0,0.35);
+  }
+
+  /* ---------- TELA DE CONFIGURAÇÃO ---------- */
+  #config{
+    width:min(420px, 90vw);
+    background: var(--card);
+    border:1px solid var(--line);
+    border-radius:20px;
+    padding:36px 32px 32px;
+  }
+  #config .eyebrow{
+    font-size:12px;
+    letter-spacing:0.14em;
+    text-transform:uppercase;
+    color: var(--blue-belt);
+    font-weight:700;
+    margin-bottom:6px;
+  }
+  #config h1{
+    font-family:'Bebas Neue', sans-serif;
+    font-size:38px;
+    letter-spacing:0.02em;
+    margin-bottom:26px;
+    line-height:1;
+  }
+  .field{
+    margin-bottom:20px;
+  }
+  .field label{
+    display:block;
+    font-size:13px;
+    color: var(--text-dim);
+    margin-bottom:8px;
+    font-weight:500;
+  }
+  .stepper{
+    display:flex;
+    align-items:center;
+    background: var(--bg-soft);
+    border:1px solid var(--line);
+    border-radius:12px;
+    overflow:hidden;
+  }
+  .stepper button{
+    width:52px; height:56px;
+    background:transparent;
+    border:none;
+    color: var(--text);
+    font-size:22px;
+    cursor:pointer;
+    transition: background 0.15s ease;
+  }
+  .stepper button:active{ background: rgba(255,255,255,0.08); }
+  .stepper input{
+    flex:1;
+    text-align:center;
+    background:transparent;
+    border:none;
+    outline:none;
+    color: var(--text);
+    font-family:'Bebas Neue', sans-serif;
+    font-size:28px;
+    letter-spacing:0.03em;
+    -moz-appearance:textfield;
+  }
+  .stepper input::-webkit-outer-spin-button,
+  .stepper input::-webkit-inner-spin-button{
+    -webkit-appearance:none; margin:0;
+  }
+  .stepper .unit{
+    padding-right:16px;
+    color: var(--text-dim);
+    font-size:13px;
+    font-weight:600;
+  }
+  .presets{
+    display:flex;
+    gap:8px;
+    margin-top:10px;
+  }
+  .presets button{
+    flex:1;
+    padding:8px 0;
+    background: var(--bg-soft);
+    border:1px solid var(--line);
+    color: var(--text-dim);
+    border-radius:8px;
+    font-size:13px;
+    font-weight:600;
+    cursor:pointer;
+  }
+  .presets button.active{
+    border-color: var(--blue-belt);
+    color: var(--white-belt);
+    background: rgba(46,111,242,0.15);
+  }
+  #start-btn{
+    width:100%;
+    margin-top:8px;
+    padding:18px 0;
+    border:none;
+    border-radius:12px;
+    background: var(--blue-belt);
+    color:#fff;
+    font-family:'Bebas Neue', sans-serif;
+    font-size:22px;
+    letter-spacing:0.06em;
+    cursor:pointer;
+    transition: transform 0.1s ease, background 0.2s ease;
+  }
+  #start-btn:active{ transform: scale(0.98); }
+
+  /* ---------- TELA DO CRONÔMETRO ---------- */
+  #timer-screen{
+    display:none;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    width:100%;
+    height:100%;
+    text-align:center;
+  }
+  #status-label{
+    font-size:clamp(16px, 3vw, 26px);
+    letter-spacing:0.18em;
+    text-transform:uppercase;
+    font-weight:700;
+    color: var(--text-dim);
+    margin-bottom:8px;
+    transition: color 0.3s ease;
+  }
+  #time-display{
+    font-family:'Bebas Neue', sans-serif;
+    font-size:clamp(90px, 26vw, 320px);
+    line-height:0.95;
+    letter-spacing:0.02em;
+    color: var(--white-belt);
+    transition: color 0.3s ease;
+    font-variant-numeric: tabular-nums;
+  }
+  #round-info{
+    margin-top:10px;
+    font-size:14px;
+    color: var(--text-dim);
+    letter-spacing:0.05em;
+  }
+  #controls{
+    position:absolute;
+    bottom:36px;
+    display:flex;
+    gap:14px;
+  }
+  #controls button{
+    padding:12px 26px;
+    border-radius:10px;
+    border:1px solid var(--line);
+    background: rgba(255,255,255,0.04);
+    color: var(--text);
+    font-size:14px;
+    font-weight:600;
+    cursor:pointer;
+    letter-spacing:0.03em;
+  }
+  #controls button:hover{ background: rgba(255,255,255,0.09); }
+  #fullscreen-btn{
+    position:absolute;
+    top:22px; right:26px;
+    background:transparent;
+    border:none;
+    color: var(--text-dim);
+    cursor:pointer;
+    font-size:13px;
+    letter-spacing:0.05em;
+  }
+
+  .flash{
+    animation: flashBg 0.5s ease-in-out infinite;
+  }
+  @keyframes flashBg{
+    0%, 100% { box-shadow: inset 0 0 0 0 rgba(230,57,70,0); }
+    50% { box-shadow: inset 0 0 0 400px rgba(230,57,70,0.18); }
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    .flash{ animation:none; }
+  }
+</style>
+</head>
+<body>
+
+<div id="app">
+  <div id="belt-bar"><div id="belt-fill"></div></div>
+
+  <!-- CONFIG -->
+  <div id="config">
+    <div class="eyebrow">Treino de Jiu Jitsu</div>
+    <h1>Configurar Round</h1>
+
+    <div class="field">
+      <label>Duração do round</label>
+      <div class="stepper">
+        <button type="button" data-target="minutes" data-step="-1">−</button>
+        <input id="minutes" type="number" min="0" max="99" value="5" inputmode="numeric">
+        <span class="unit">min</span>
+        <button type="button" data-target="minutes" data-step="1">+</button>
+      </div>
+      <div class="presets" id="presets-min">
+        <button data-val="3">3 min</button>
+        <button data-val="5" class="active">5 min</button>
+        <button data-val="6">6 min</button>
+        <button data-val="10">10 min</button>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Número de rounds</label>
+      <div class="stepper">
+        <button type="button" data-target="rounds" data-step="-1">−</button>
+        <input id="rounds" type="number" min="1" max="20" value="1" inputmode="numeric">
+        <span class="unit">round(s)</span>
+        <button type="button" data-target="rounds" data-step="1">+</button>
+      </div>
+    </div>
+
+    <div class="field" id="rest-field">
+      <label>Descanso entre rounds</label>
+      <div class="stepper">
+        <button type="button" data-target="rest" data-step="-15">−</button>
+        <input id="rest" type="number" min="0" max="600" value="60" inputmode="numeric">
+        <span class="unit">seg</span>
+        <button type="button" data-target="rest" data-step="15">+</button>
+      </div>
+      <div class="presets" id="presets-rest">
+        <button data-val="30">30 s</button>
+        <button data-val="60" class="active">60 s</button>
+        <button data-val="90">90 s</button>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Delay antes de começar</label>
+      <div class="stepper">
+        <button type="button" data-target="delay" data-step="-5">−</button>
+        <input id="delay" type="number" min="0" max="120" value="10" inputmode="numeric">
+        <span class="unit">seg</span>
+        <button type="button" data-target="delay" data-step="5">+</button>
+      </div>
+    </div>
+
+    <button id="start-btn">Iniciar</button>
+  </div>
+
+  <!-- TIMER -->
+  <div id="timer-screen">
+    <button id="fullscreen-btn">⤢ Tela cheia</button>
+    <div id="status-label">Prepare-se</div>
+    <div id="time-display">00:00</div>
+    <div id="round-info"></div>
+    <div id="controls">
+      <button id="pause-btn">Pausar</button>
+      <button id="reset-btn">Reconfigurar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  const app = document.getElementById('app');
+  const configScreen = document.getElementById('config');
+  const timerScreen = document.getElementById('timer-screen');
+  const minutesInput = document.getElementById('minutes');
+  const delayInput = document.getElementById('delay');
+  const startBtn = document.getElementById('start-btn');
+  const pauseBtn = document.getElementById('pause-btn');
+  const resetBtn = document.getElementById('reset-btn');
+  const fullscreenBtn = document.getElementById('fullscreen-btn');
+  const statusLabel = document.getElementById('status-label');
+  const timeDisplay = document.getElementById('time-display');
+  const roundInfo = document.getElementById('round-info');
+  const beltFill = document.getElementById('belt-fill');
+  const presetButtons = document.querySelectorAll('#presets-min button');
+  const restPresetButtons = document.querySelectorAll('#presets-rest button');
+  const roundsInput = document.getElementById('rounds');
+  const restInput = document.getElementById('rest');
+
+  let totalSeconds = 0;
+  let remaining = 0;
+  let delaySeconds = 0;
+  let restSeconds = 0;
+  let totalRounds = 1;
+  let currentRound = 1;
+  let phase = 'idle'; // idle | delay | running | rest | paused | finished
+  let intervalId = null;
+  let endTimestamp = null;
+  let pausedRemaining = null;
+  let lastBeepSecond = null;
+
+  // ---- Áudio (sem arquivos externos, tudo via Web Audio API) ----
+  let audioCtx = null;
+  function ensureAudio(){
+    if(!audioCtx){
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    if(audioCtx.state === 'suspended') audioCtx.resume();
+  }
+  function beep(freq, duration, volume){
+    if(!audioCtx) return;
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = 'sine';
+    osc.frequency.value = freq;
+    gain.gain.value = volume || 0.2;
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    osc.start();
+    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+    osc.stop(audioCtx.currentTime + duration);
+  }
+  function tickBeep(){ beep(440, 0.12, 0.18); }
+  function startBeep(){ beep(880, 0.35, 0.25); }
+
+  // buzzer de fim de round: tom longo e forte, tipo sirene de academia,
+  // toca sempre que um round individual termina (haja ou não descanso a seguir)
+  function roundEndBuzzer(){
+    if(!audioCtx) return;
+    const now = audioCtx.currentTime;
+    [0, 1.0].forEach(offset=>{
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = 'sawtooth';
+      osc.frequency.value = 200;
+      gain.gain.setValueAtTime(0.0001, now + offset);
+      gain.gain.exponentialRampToValueAtTime(0.35, now + offset + 0.05);
+      gain.gain.setValueAtTime(0.35, now + offset + 0.75);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + offset + 0.9);
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start(now + offset);
+      osc.stop(now + offset + 0.95);
+    });
+  }
+
+  // buzzer final: toca quando TODOS os rounds terminaram, mais longo e enfático
+  function finalBuzzer(){
+    if(!audioCtx) return;
+    const now = audioCtx.currentTime;
+    const starts = [0, 1.1, 2.2];
+    starts.forEach((offset, i)=>{
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = 'sawtooth';
+      osc.frequency.value = i < 2 ? 200 : 260;
+      const dur = i < 2 ? 0.9 : 1.6;
+      gain.gain.setValueAtTime(0.0001, now + offset);
+      gain.gain.exponentialRampToValueAtTime(0.4, now + offset + 0.05);
+      gain.gain.setValueAtTime(0.4, now + offset + dur - 0.15);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + offset + dur);
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start(now + offset);
+      osc.stop(now + offset + dur + 0.05);
+    });
+  }
+
+  // ---- Stepper +/- ----
+  document.querySelectorAll('.stepper button[data-target]').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const target = document.getElementById(btn.dataset.target);
+      const step = parseInt(btn.dataset.step, 10);
+      let val = parseInt(target.value || '0', 10) + step;
+      const min = parseInt(target.min, 10);
+      const max = parseInt(target.max, 10);
+      if(val < min) val = min;
+      if(val > max) val = max;
+      target.value = val;
+      if(target.id === 'minutes'){
+        presetButtons.forEach(b => b.classList.toggle('active', parseInt(b.dataset.val,10) === val));
+      }
+    });
+  });
+
+  presetButtons.forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      minutesInput.value = btn.dataset.val;
+      presetButtons.forEach(b=>b.classList.remove('active'));
+      btn.classList.add('active');
+    });
+  });
+
+  restPresetButtons.forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      restInput.value = btn.dataset.val;
+      restPresetButtons.forEach(b=>b.classList.remove('active'));
+      btn.classList.add('active');
+    });
+  });
+
+  function fmt(sec){
+    sec = Math.max(0, Math.round(sec));
+    const m = Math.floor(sec/60).toString().padStart(2,'0');
+    const s = (sec%60).toString().padStart(2,'0');
+    return m+':'+s;
+  }
+
+  function beltColorFor(fracRemaining){
+    // fracRemaining: 1 = tempo cheio, 0 = acabou
+    if(fracRemaining > 0.75) return getComputedStyle(document.documentElement).getPropertyValue('--white-belt');
+    if(fracRemaining > 0.5)  return getComputedStyle(document.documentElement).getPropertyValue('--blue-belt');
+    if(fracRemaining > 0.25) return getComputedStyle(document.documentElement).getPropertyValue('--purple-belt');
+    if(fracRemaining > 0.1)  return getComputedStyle(document.documentElement).getPropertyValue('--brown-belt');
+    return getComputedStyle(document.documentElement).getPropertyValue('--danger');
+  }
+
+  function updateVisual(){
+    if(phase === 'delay'){
+      timeDisplay.textContent = Math.ceil(remaining);
+      statusLabel.textContent = 'Prepare-se';
+      statusLabel.style.color = 'var(--blue-belt)';
+      timeDisplay.style.color = 'var(--white-belt)';
+      beltFill.style.height = '100%';
+      beltFill.style.background = 'var(--blue-belt)';
+      roundInfo.textContent = totalRounds > 1 ? ('Round 1 de ' + totalRounds) : '';
+      app.classList.remove('flash');
+    } else if(phase === 'running' || (phase === 'paused' && phaseBeforePause === 'running')){
+      timeDisplay.textContent = fmt(remaining);
+      statusLabel.textContent = phase === 'paused' ? 'Pausado' : 'Lutando';
+      const frac = totalSeconds > 0 ? remaining / totalSeconds : 0;
+      const color = beltColorFor(frac).trim();
+      timeDisplay.style.color = color;
+      statusLabel.style.color = frac <= 0.1 ? 'var(--danger)' : 'var(--text-dim)';
+      beltFill.style.height = (frac*100)+'%';
+      beltFill.style.background = color;
+      roundInfo.textContent = totalRounds > 1 ? ('Round ' + currentRound + ' de ' + totalRounds) : '';
+      if(frac <= 0.1 && phase === 'running'){
+        app.classList.add('flash');
+      } else {
+        app.classList.remove('flash');
+      }
+    } else if(phase === 'rest' || (phase === 'paused' && phaseBeforePause === 'rest')){
+      timeDisplay.textContent = fmt(remaining);
+      statusLabel.textContent = phase === 'paused' ? 'Pausado' : 'Descanso';
+      statusLabel.style.color = 'var(--purple-belt)';
+      timeDisplay.style.color = 'var(--purple-belt)';
+      const frac = restSeconds > 0 ? remaining / restSeconds : 0;
+      beltFill.style.height = (frac*100)+'%';
+      beltFill.style.background = 'var(--purple-belt)';
+      roundInfo.textContent = 'Próximo: Round ' + (currentRound + 1) + ' de ' + totalRounds;
+      app.classList.remove('flash');
+    } else if(phase === 'finished'){
+      timeDisplay.textContent = '00:00';
+      statusLabel.textContent = 'Tempo!';
+      statusLabel.style.color = 'var(--danger)';
+      timeDisplay.style.color = 'var(--danger)';
+      beltFill.style.height = '0%';
+      roundInfo.textContent = totalRounds > 1 ? ('Treino concluído — ' + totalRounds + ' rounds') : '';
+      app.classList.add('flash');
+    }
+  }
+
+  function tick(){
+    const now = Date.now();
+    remaining = (endTimestamp - now) / 1000;
+
+    if(phase === 'delay'){
+      const secLeft = Math.ceil(remaining);
+      if(secLeft !== lastBeepSecond && secLeft >= 0){
+        lastBeepSecond = secLeft;
+        if(secLeft > 0) tickBeep();
+      }
+      if(remaining <= 0){
+        beginRound();
+        return;
+      }
+    } else if(phase === 'running'){
+      if(remaining <= 0){
+        onRoundComplete();
+        return;
+      }
+    } else if(phase === 'rest'){
+      const secLeft = Math.ceil(remaining);
+      if(secLeft !== lastBeepSecond && secLeft >= 0 && secLeft <= 3){
+        lastBeepSecond = secLeft;
+        if(secLeft > 0) tickBeep();
+      }
+      if(remaining <= 0){
+        beginRound();
+        return;
+      }
+    }
+    updateVisual();
+  }
+
+  function startCountdownLoop(){
+    if(intervalId) clearInterval(intervalId);
+    intervalId = setInterval(tick, 100);
+  }
+
+  function beginDelay(){
+    delaySeconds = parseInt(delayInput.value || '0', 10);
+    totalSeconds = parseInt(minutesInput.value || '0', 10) * 60;
+    if(totalSeconds <= 0){ totalSeconds = 60; }
+    totalRounds = Math.max(1, parseInt(roundsInput.value || '1', 10));
+    restSeconds = parseInt(restInput.value || '0', 10);
+    currentRound = 1;
+
+    configScreen.style.display = 'none';
+    timerScreen.style.display = 'flex';
+
+    if(delaySeconds > 0){
+      phase = 'delay';
+      remaining = delaySeconds;
+      lastBeepSecond = null;
+      endTimestamp = Date.now() + delaySeconds*1000;
+      startCountdownLoop();
+      updateVisual();
+    } else {
+      beginRound();
+    }
+  }
+
+  function beginRound(){
+    phase = 'running';
+    remaining = totalSeconds;
+    lastBeepSecond = null;
+    startBeep();
+    endTimestamp = Date.now() + totalSeconds*1000;
+    startCountdownLoop();
+    updateVisual();
+    pauseBtn.textContent = 'Pausar';
+  }
+
+  function onRoundComplete(){
+    clearInterval(intervalId);
+    remaining = 0;
+
+    if(currentRound >= totalRounds){
+      phase = 'finished';
+      finalBuzzer();
+      updateVisual();
+      return;
+    }
+
+    roundEndBuzzer();
+    currentRound += 1;
+
+    if(restSeconds > 0){
+      phase = 'rest';
+      remaining = restSeconds;
+      lastBeepSecond = null;
+      endTimestamp = Date.now() + restSeconds*1000;
+      startCountdownLoop();
+      updateVisual();
+    } else {
+      beginRound();
+    }
+  }
+
+  let phaseBeforePause = null;
+
+  function togglePause(){
+    if(phase === 'running' || phase === 'rest'){
+      phaseBeforePause = phase;
+      pausedRemaining = remaining;
+      clearInterval(intervalId);
+      phase = 'paused';
+      pauseBtn.textContent = 'Retomar';
+      updateVisual();
+    } else if(phase === 'paused'){
+      phase = phaseBeforePause;
+      endTimestamp = Date.now() + pausedRemaining*1000;
+      startCountdownLoop();
+      pauseBtn.textContent = 'Pausar';
+      updateVisual();
+    }
+  }
+
+  function resetAll(){
+    clearInterval(intervalId);
+    phase = 'idle';
+    app.classList.remove('flash');
+    timerScreen.style.display = 'none';
+    configScreen.style.display = 'block';
+  }
+
+  startBtn.addEventListener('click', ()=>{
+    ensureAudio();
+    beginDelay();
+  });
+  pauseBtn.addEventListener('click', togglePause);
+  resetBtn.addEventListener('click', resetAll);
+
+  fullscreenBtn.addEventListener('click', ()=>{
+    if(!document.fullscreenElement){
+      document.documentElement.requestFullscreen().catch(()=>{});
+    } else {
+      document.exitFullscreen();
+    }
+  });
+
+  // clique/toque na tela do cronômetro também alterna pausa (útil em TV/tablet)
+  timerScreen.addEventListener('click', (e)=>{
+    if(e.target === pauseBtn || e.target === resetBtn || e.target === fullscreenBtn) return;
+    if(phase === 'running' || phase === 'rest' || phase === 'paused') togglePause();
+  });
+
+  document.addEventListener('keydown', (e)=>{
+    if(e.code === 'Space'){
+      e.preventDefault();
+      if(phase === 'running' || phase === 'rest' || phase === 'paused') togglePause();
+    }
+    if(e.code === 'Escape' && document.fullscreenElement){
+      document.exitFullscreen();
+    }
+  });
+})();
+</script>
+
+</body>
+</html>
